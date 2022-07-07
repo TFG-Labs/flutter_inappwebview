@@ -8,6 +8,9 @@ import 'package:flutter_inappwebview/src/util.dart';
 
 import 'chrome_safari_browser_options.dart';
 
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:android_intent_plus/flag.dart';
+
 class ChromeSafariBrowserAlreadyOpenedException implements Exception {
   final dynamic message;
 
@@ -103,14 +106,25 @@ class ChromeSafariBrowser {
       menuItemList.add(value.toMap());
     });
 
-    Map<String, dynamic> args = <String, dynamic>{};
-    args.putIfAbsent('id', () => id);
-    args.putIfAbsent('url', () => url.toString());
-    args.putIfAbsent('options', () => options?.toMap() ?? {});
-    args.putIfAbsent('actionButton', () => _actionButton?.toMap());
-    args.putIfAbsent('menuItemList', () => menuItemList);
-    await _sharedChannel.invokeMethod('open', args);
-    this._isOpened = true;
+    try{
+      Map<String, dynamic> args = <String, dynamic>{};
+      args.putIfAbsent('id', () => id);
+      args.putIfAbsent('url', () => url.toString());
+      args.putIfAbsent('options', () => options?.toMap() ?? {});
+      args.putIfAbsent('actionButton', () => _actionButton?.toMap());
+      args.putIfAbsent('menuItemList', () => menuItemList);
+      await _sharedChannel.invokeMethod('open', args);
+      this._isOpened = true;
+    } on PlatformException catch (e) {
+      final intent = AndroidIntent(
+        action: 'action_view',
+        data: Uri.encodeFull(url.toString()),
+        flags: <int>[
+          Flag.FLAG_ACTIVITY_NEW_TASK,
+        ],
+      );
+      intent.launch();
+    }
   }
 
   ///Closes the [ChromeSafariBrowser] instance.
