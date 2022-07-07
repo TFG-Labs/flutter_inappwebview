@@ -2,6 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.iml" filepath="$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.main.iml" filepath="$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/com.pichillilorenzo.flutter_inappwebview.flutter_inappwebview.unitTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/flutter_inappwebview.iml" filepath="$PROJECT_DIR$/flutter_inappwebview.iml" />
     </modules>
   </component>
