@@ -116,14 +116,14 @@ class ChromeSafariBrowser {
       await _sharedChannel.invokeMethod('open', args);
       this._isOpened = true;
     } on PlatformException catch (e) {
-      final intent = AndroidIntent(
-        action: 'action_view',
-        data: Uri.encodeFull(url.toString()),
-        flags: <int>[
-          Flag.FLAG_ACTIVITY_NEW_TASK,
-        ],
-      );
-      intent.launch();
+      // final intent = AndroidIntent(
+      //   action: 'action_view',
+      //   data: Uri.encodeFull(url.toString()),
+      //   flags: <int>[
+      //     Flag.FLAG_ACTIVITY_NEW_TASK,
+      //   ],
+      // );
+      // intent.launch();
     }
   }
 
