@@ -8,8 +8,8 @@ import 'package:flutter_inappwebview/src/util.dart';
 
 import 'chrome_safari_browser_options.dart';
 
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:android_intent_plus/flag.dart';
+// import 'package:android_intent_plus/android_intent.dart';
+// import 'package:android_intent_plus/flag.dart';
 
 class ChromeSafariBrowserAlreadyOpenedException implements Exception {
   final dynamic message;
