@@ -2,6 +2,7 @@ package com.pichillilorenzo.flutter_inappwebview.chrome_custom_tabs;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -10,6 +11,7 @@ import com.pichillilorenzo.flutter_inappwebview.InAppWebViewFlutterPlugin;
 import com.pichillilorenzo.flutter_inappwebview.Util;
 
 import java.io.Serializable;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,18 +50,6 @@ public class ChromeSafariBrowserManager implements MethodChannel.MethodCallHandl
           List<HashMap<String, Object>> menuItemList = (List<HashMap<String, Object>>) call.argument("menuItemList");
           open(plugin.activity, id, url, options, actionButton, menuItemList, result);
         } else {
-          result.success(false);
-        }
-        break;
-      case "openFallback":
-        if (plugin != null && plugin.activity != null) {
-          String url = (String) call.argument("url");
-          Intent intent = Intent(Intent.ACTION_VIEW);
-          intent.setData(Uri.parse(url));
-          intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-          startActivity(intent);
-          result.success(true);
-        }else{
           result.success(false);
         }
         break;
@@ -103,9 +93,14 @@ public class ChromeSafariBrowserManager implements MethodChannel.MethodCallHandl
       activity.startActivity(intent);
       result.success(true);
       return;
+    }else{
+      intent = new Intent(Intent.ACTION_VIEW);
+      intent.setData(Uri.parse(url));
+      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      activity.startActivity(intent);
+      result.success(true);
+      return;
     }
-
-    result.error(LOG_TAG, "ChromeCustomTabs is not available!", null);
   }
 
   public void dispose() {

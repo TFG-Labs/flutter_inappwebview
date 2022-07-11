@@ -104,24 +104,14 @@ class ChromeSafariBrowser {
       menuItemList.add(value.toMap());
     });
 
-    try {
-      Map<String, dynamic> args = <String, dynamic>{};
-      args.putIfAbsent('id', () => id);
-      args.putIfAbsent('url', () => url.toString());
-      args.putIfAbsent('options', () => options?.toMap() ?? {});
-      args.putIfAbsent('actionButton', () => _actionButton?.toMap());
-      args.putIfAbsent('menuItemList', () => menuItemList);
-      await _sharedChannel.invokeMethod('open', args);
-      this._isOpened = true;
-    } on PlatformException catch (e) {
-      Map<String, dynamic> args = <String, dynamic>{};
-      args.putIfAbsent('id', () => id);
-      args.putIfAbsent('url', () => url.toString());
-      args.putIfAbsent('options', () => options?.toMap() ?? {});
-      args.putIfAbsent('actionButton', () => _actionButton?.toMap());
-      args.putIfAbsent('menuItemList', () => menuItemList);
-      await _sharedChannel.invokeMethod('openFallback', args);
-    }
+    Map<String, dynamic> args = <String, dynamic>{};
+    args.putIfAbsent('id', () => id);
+    args.putIfAbsent('url', () => url.toString());
+    args.putIfAbsent('options', () => options?.toMap() ?? {});
+    args.putIfAbsent('actionButton', () => _actionButton?.toMap());
+    args.putIfAbsent('menuItemList', () => menuItemList);
+    await _sharedChannel.invokeMethod('open', args);
+    this._isOpened = true;
   }
 
   ///Closes the [ChromeSafariBrowser] instance.
