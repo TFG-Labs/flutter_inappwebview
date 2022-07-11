@@ -9,9 +9,6 @@ import 'package:flutter_inappwebview/src/util.dart';
 
 import 'chrome_safari_browser_options.dart';
 
-import 'package:intent/intent.dart' as androidIntent;
-import 'package:intent/action.dart' as intentAction;
-
 class ChromeSafariBrowserAlreadyOpenedException implements Exception {
   final dynamic message;
 
@@ -117,10 +114,13 @@ class ChromeSafariBrowser {
       await _sharedChannel.invokeMethod('open', args);
       this._isOpened = true;
     } on PlatformException catch (e) {
-      androidIntent.Intent()
-        ..setAction(intentAction.Action.ACTION_VIEW)
-        ..setData(url)
-        ..startActivity().catchError((e) => print(e));
+      Map<String, dynamic> args = <String, dynamic>{};
+      args.putIfAbsent('id', () => id);
+      args.putIfAbsent('url', () => url.toString());
+      args.putIfAbsent('options', () => options?.toMap() ?? {});
+      args.putIfAbsent('actionButton', () => _actionButton?.toMap());
+      args.putIfAbsent('menuItemList', () => menuItemList);
+      await _sharedChannel.invokeMethod('openFallback', args);
     }
   }
 

@@ -51,6 +51,18 @@ public class ChromeSafariBrowserManager implements MethodChannel.MethodCallHandl
           result.success(false);
         }
         break;
+      case "openFallback":
+        if (plugin != null && plugin.activity != null) {
+          String url = (String) call.argument("url");
+          Intent intent = Intent(Intent.ACTION_VIEW);
+          intent.setData(Uri.parse(url));
+          intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+          startActivity(intent);
+          result.success(true);
+        }else{
+          result.success(false);
+        }
+        break;
       case "isAvailable":
         if (plugin != null && plugin.activity != null) {
           result.success(CustomTabActivityHelper.isAvailable(plugin.activity));
