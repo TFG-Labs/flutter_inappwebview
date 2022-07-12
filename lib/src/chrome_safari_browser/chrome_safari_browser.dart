@@ -8,9 +8,6 @@ import 'package:flutter_inappwebview/src/util.dart';
 
 import 'chrome_safari_browser_options.dart';
 
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:android_intent_plus/flag.dart';
-
 class ChromeSafariBrowserAlreadyOpenedException implements Exception {
   final dynamic message;
 
@@ -105,8 +102,7 @@ class ChromeSafariBrowser {
     _menuItems.forEach((key, value) {
       menuItemList.add(value.toMap());
     });
-
-    try{
+    try {
       Map<String, dynamic> args = <String, dynamic>{};
       args.putIfAbsent('id', () => id);
       args.putIfAbsent('url', () => url.toString());
@@ -115,15 +111,11 @@ class ChromeSafariBrowser {
       args.putIfAbsent('menuItemList', () => menuItemList);
       await _sharedChannel.invokeMethod('open', args);
       this._isOpened = true;
-    } on PlatformException catch (e) {
-      final intent = AndroidIntent(
-        action: 'action_view',
-        data: Uri.encodeFull(url.toString()),
-        flags: <int>[
-          Flag.FLAG_ACTIVITY_NEW_TASK,
-        ],
+    } on Exception catch (e) {
+      throw LoginException(
+        'Login Webview Exception',
+        'User could not open login webview for error: ${e.toString()}',
       );
-      intent.launch();
     }
   }
 
@@ -271,4 +263,13 @@ class ChromeSafariBrowserMenuItem {
   String toString() {
     return toMap().toString();
   }
+}
+
+class LoginException implements Exception {
+  LoginException(
+    this.title,
+    this.message,
+  );
+  final String title;
+  final String message;
 }
