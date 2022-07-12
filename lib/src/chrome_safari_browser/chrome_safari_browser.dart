@@ -103,15 +103,18 @@ class ChromeSafariBrowser {
     _menuItems.forEach((key, value) {
       menuItemList.add(value.toMap());
     });
-
-    Map<String, dynamic> args = <String, dynamic>{};
-    args.putIfAbsent('id', () => id);
-    args.putIfAbsent('url', () => url.toString());
-    args.putIfAbsent('options', () => options?.toMap() ?? {});
-    args.putIfAbsent('actionButton', () => _actionButton?.toMap());
-    args.putIfAbsent('menuItemList', () => menuItemList);
-    await _sharedChannel.invokeMethod('open', args);
-    this._isOpened = true;
+    try {
+      Map<String, dynamic> args = <String, dynamic>{};
+      args.putIfAbsent('id', () => id);
+      args.putIfAbsent('url', () => url.toString());
+      args.putIfAbsent('options', () => options?.toMap() ?? {});
+      args.putIfAbsent('actionButton', () => _actionButton?.toMap());
+      args.putIfAbsent('menuItemList', () => menuItemList);
+      await _sharedChannel.invokeMethod('open', args);
+      this._isOpened = true;
+    } on Exception {
+      throw Exception;
+    }
   }
 
   ///Closes the [ChromeSafariBrowser] instance.
