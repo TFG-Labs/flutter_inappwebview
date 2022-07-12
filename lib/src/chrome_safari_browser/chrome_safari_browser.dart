@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/src/util.dart';
 
@@ -112,8 +111,11 @@ class ChromeSafariBrowser {
       args.putIfAbsent('menuItemList', () => menuItemList);
       await _sharedChannel.invokeMethod('open', args);
       this._isOpened = true;
-    } on Exception {
-      throw Exception;
+    } on Exception catch (e) {
+      throw LoginException(
+        'Login Webview Exception',
+        'User could not open login webview for error: ${e.toString()}',
+      );
     }
   }
 
@@ -261,4 +263,13 @@ class ChromeSafariBrowserMenuItem {
   String toString() {
     return toMap().toString();
   }
+}
+
+class LoginException implements Exception {
+  LoginException(
+    this.title,
+    this.message,
+  );
+  final String title;
+  final String message;
 }
