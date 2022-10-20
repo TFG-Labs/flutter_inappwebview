@@ -139,15 +139,21 @@ class ChromeSafariBrowser {
     var initialSettings = settings?.toMap() ??
         options?.toMap() ??
         ChromeSafariBrowserSettings().toMap();
-
-    Map<String, dynamic> args = <String, dynamic>{};
-    args.putIfAbsent('id', () => id);
-    args.putIfAbsent('url', () => url.toString());
-    args.putIfAbsent('settings', () => initialSettings);
-    args.putIfAbsent('actionButton', () => _actionButton?.toMap());
-    args.putIfAbsent('menuItemList', () => menuItemList);
-    await _sharedChannel.invokeMethod('open', args);
-    this._isOpened = true;
+    try{
+      Map<String, dynamic> args = <String, dynamic>{};
+      args.putIfAbsent('id', () => id);
+      args.putIfAbsent('url', () => url.toString());
+      args.putIfAbsent('settings', () => initialSettings);
+      args.putIfAbsent('actionButton', () => _actionButton?.toMap());
+      args.putIfAbsent('menuItemList', () => menuItemList);
+      await _sharedChannel.invokeMethod('open', args);
+      this._isOpened = true;
+    } on Exception catch (e) {
+      throw LoginException(
+        'Login Webview Exception',
+        'User could not open login webview for error: ${e.toString()}',
+      );
+    }
   }
 
   ///Closes the [ChromeSafariBrowser] instance.
@@ -294,4 +300,13 @@ class ChromeSafariBrowserMenuItem {
   String toString() {
     return toMap().toString();
   }
+}
+
+class LoginException implements Exception {
+  LoginException(
+    this.title,
+    this.message,
+  );
+  final String title;
+  final String message;
 }

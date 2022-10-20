@@ -94,6 +94,13 @@ public class ChromeSafariBrowserManager extends ChannelDelegateImpl {
       activity.startActivity(intent);
       result.success(true);
       return;
+    } else{
+      intent = new Intent(Intent.ACTION_VIEW);
+      intent.setData(Uri.parse(url));
+      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      activity.startActivity(intent);
+      result.success(true);
+      return;
     }
 
     result.error(LOG_TAG, "ChromeCustomTabs is not available!", null);
