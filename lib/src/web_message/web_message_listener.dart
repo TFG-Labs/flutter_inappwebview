@@ -1,8 +1,13 @@
 import 'package:flutter/services.dart';
 import '../in_app_webview/in_app_webview_controller.dart';
-import '../types.dart';
+import '../types/main.dart';
 
 ///This listener receives messages sent on the JavaScript object which was injected by [InAppWebViewController.addWebMessageListener].
+///
+///**Supported Platforms/Implementations**:
+///- Android native WebView
+///- iOS
+///- MacOS
 class WebMessageListener {
   ///The name for the injected JavaScript object.
   final String jsObjectName;
@@ -36,10 +41,17 @@ class WebMessageListener {
         "allowedOriginRules cannot contain empty strings");
     this._channel = MethodChannel(
         'com.pichillilorenzo/flutter_inappwebview_web_message_listener_$jsObjectName');
-    this._channel.setMethodCallHandler(handleMethod);
+    this._channel.setMethodCallHandler((call) async {
+      try {
+        return await _handleMethod(call);
+      } on Error catch (e) {
+        print(e);
+        print(e.stackTrace);
+      }
+    });
   }
 
-  Future<dynamic> handleMethod(MethodCall call) async {
+  Future<dynamic> _handleMethod(MethodCall call) async {
     switch (call.method) {
       case "onPostMessage":
         if (_replyProxy == null) {

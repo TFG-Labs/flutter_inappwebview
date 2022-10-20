@@ -10,12 +10,13 @@ public class PrintJS {
           PrintJS.PRINT_JS_SOURCE,
           UserScriptInjectionTime.AT_DOCUMENT_START,
           null,
-          false
+          false,
+          null
   );
 
   public static final String PRINT_JS_SOURCE = "window.print = function() {" +
           "  if (window.top == null || window.top === window) {" +
-          "     window." + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + ".callHandler('onPrint', window.location.href);" +
+          "     window." + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + ".callHandler('onPrintRequest', window.location.href);" +
           "  } else {" +
           "     window.top.print();" +
           "  }" +

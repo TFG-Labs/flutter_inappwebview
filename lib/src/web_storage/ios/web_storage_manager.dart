@@ -2,13 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-import '../../types.dart';
+import '../../types/main.dart';
 import '../_static_channel.dart';
 
 ///Class that represents various types of data that a website might make use of.
 ///This includes cookies, disk and memory caches, and persistent data such as WebSQL, IndexedDB databases, and local storage.
 ///
 ///**NOTE**: available on iOS 9.0+.
+///
+///Use [WebStorageManager] instead.
+@Deprecated("Use WebStorageManager instead")
 class IOSWebStorageManager {
   static MethodChannel _staticChannel = WEB_STORAGE_STATIC_CHANNEL;
 
@@ -20,7 +23,7 @@ class IOSWebStorageManager {
     List<IOSWKWebsiteDataRecord> recordList = [];
     List<String> dataTypesList = [];
     for (var dataType in dataTypes) {
-      dataTypesList.add(dataType.toValue());
+      dataTypesList.add(dataType.toNativeValue());
     }
     Map<String, dynamic> args = <String, dynamic>{};
     args.putIfAbsent("dataTypes", () => dataTypesList);
@@ -31,7 +34,7 @@ class IOSWebStorageManager {
       List<String> dataTypesString = record["dataTypes"].cast<String>();
       Set<IOSWKWebsiteDataType> dataTypes = Set();
       for (var dataTypeValue in dataTypesString) {
-        var dataType = IOSWKWebsiteDataType.fromValue(dataTypeValue);
+        var dataType = IOSWKWebsiteDataType.fromNativeValue(dataTypeValue);
         if (dataType != null) {
           dataTypes.add(dataType);
         }
@@ -52,7 +55,7 @@ class IOSWebStorageManager {
       required List<IOSWKWebsiteDataRecord> dataRecords}) async {
     List<String> dataTypesList = [];
     for (var dataType in dataTypes) {
-      dataTypesList.add(dataType.toValue());
+      dataTypesList.add(dataType.toNativeValue());
     }
 
     List<Map<String, dynamic>> recordList = [];
@@ -76,7 +79,7 @@ class IOSWebStorageManager {
       required DateTime date}) async {
     List<String> dataTypesList = [];
     for (var dataType in dataTypes) {
-      dataTypesList.add(dataType.toValue());
+      dataTypesList.add(dataType.toNativeValue());
     }
 
     var timestamp = date.millisecondsSinceEpoch;

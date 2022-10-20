@@ -1,18 +1,20 @@
 import 'dart:ui';
 
 import '../../util.dart';
-import '../../types.dart';
+import '../../types/main.dart';
 
-import '../chrome_safari_browser_options.dart';
+import '../chrome_safari_browser_settings.dart';
 import '../chrome_safari_browser.dart';
 
 import '../../in_app_webview/android/in_app_webview_options.dart';
 
 ///This class represents all the Android-only [ChromeSafariBrowser] options available.
+///Use [ChromeSafariBrowserSettings] instead.
+@Deprecated('Use ChromeSafariBrowserSettings instead')
 class AndroidChromeCustomTabsOptions
     implements ChromeSafariBrowserOptions, AndroidOptions {
   ///Use [shareState] instead.
-  @Deprecated('Use `shareState` instead')
+  @Deprecated('Use shareState instead')
   bool? addDefaultShareMenuItem;
 
   ///The share state that should be applied to the custom tab. The default value is [CustomTabsShareState.SHARE_STATE_DEFAULT].
@@ -73,7 +75,7 @@ class AndroidChromeCustomTabsOptions
   TrustedWebActivityScreenOrientation screenOrientation;
 
   AndroidChromeCustomTabsOptions(
-      {@Deprecated('Use `shareState` instead') this.addDefaultShareMenuItem,
+      {@Deprecated('Use shareState instead') this.addDefaultShareMenuItem,
       this.shareState = CustomTabsShareState.SHARE_STATE_DEFAULT,
       this.showTitle = true,
       this.toolbarBackgroundColor,
@@ -93,7 +95,7 @@ class AndroidChromeCustomTabsOptions
     return {
       // ignore: deprecated_member_use_from_same_package
       "addDefaultShareMenuItem": addDefaultShareMenuItem,
-      "shareState": shareState.toValue(),
+      "shareState": shareState.toNativeValue(),
       "showTitle": showTitle,
       "toolbarBackgroundColor": toolbarBackgroundColor?.toHex(),
       "enableUrlBarHiding": enableUrlBarHiding,
@@ -105,7 +107,7 @@ class AndroidChromeCustomTabsOptions
       "isTrustedWebActivity": isTrustedWebActivity,
       "additionalTrustedOrigins": additionalTrustedOrigins,
       "displayMode": displayMode?.toMap(),
-      "screenOrientation": screenOrientation.toValue()
+      "screenOrientation": screenOrientation.toNativeValue()
     };
   }
 

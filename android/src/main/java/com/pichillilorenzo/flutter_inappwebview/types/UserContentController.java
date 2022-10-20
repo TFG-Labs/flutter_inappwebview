@@ -1,10 +1,14 @@
 package com.pichillilorenzo.flutter_inappwebview.types;
 
+import android.annotation.SuppressLint;
 import android.text.TextUtils;
-import android.util.Log;
+import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.webkit.ScriptHandler;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 
 import com.pichillilorenzo.flutter_inappwebview.Util;
 import com.pichillilorenzo.flutter_inappwebview.plugin_scripts_js.JavaScriptBridgeJS;
@@ -21,7 +25,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class UserContentController {
+import io.flutter.Log;
+
+@SuppressLint("RestrictedApi")
+public class UserContentController implements Disposable {
   protected static final String LOG_TAG = "UserContentController";
 
   @NonNull
@@ -29,10 +36,15 @@ public class UserContentController {
     add(ContentWorld.PAGE);
   }};
 
+  private final Map<UserScript, ScriptHandler> scriptHandlerMap = new HashMap<>();
+
+  @Nullable
+  private ScriptHandler contentWorldsCreatorScript;
+
   @NonNull
   private final Map<UserScriptInjectionTime, LinkedHashSet<UserScript>> userOnlyScripts = new HashMap<UserScriptInjectionTime, LinkedHashSet<UserScript>>() {{
-      put(UserScriptInjectionTime.AT_DOCUMENT_START, new LinkedHashSet<UserScript>());
-      put(UserScriptInjectionTime.AT_DOCUMENT_END, new LinkedHashSet<UserScript>());
+    put(UserScriptInjectionTime.AT_DOCUMENT_START, new LinkedHashSet<UserScript>());
+    put(UserScriptInjectionTime.AT_DOCUMENT_END, new LinkedHashSet<UserScript>());
   }};
   @NonNull
   private final Map<UserScriptInjectionTime, LinkedHashSet<PluginScript>> pluginScripts = new HashMap<UserScriptInjectionTime, LinkedHashSet<PluginScript>>() {{
@@ -40,7 +52,11 @@ public class UserContentController {
     put(UserScriptInjectionTime.AT_DOCUMENT_END, new LinkedHashSet<PluginScript>());
   }};
 
-  public UserContentController() {
+  @Nullable
+  public WebView webView;
+
+  public UserContentController(WebView webView) {
+    this.webView = webView;
   }
 
   public String generateWrappedCodeForDocumentStart() {
@@ -52,8 +68,11 @@ public class UserContentController {
 
   public String generateWrappedCodeForDocumentEnd() {
     UserScriptInjectionTime injectionTime = UserScriptInjectionTime.AT_DOCUMENT_END;
-    // try to reload scripts if they were not loaded during the AT_DOCUMENT_START event
-    String js = generateCodeForDocumentStart();
+    String js = "";
+    if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      // try to reload scripts if they were not loaded during the AT_DOCUMENT_START event
+      js += generateCodeForDocumentStart();
+    }
     js += generatePluginScriptsCodeAt(injectionTime);
     js += generateUserOnlyScriptsCodeAt(injectionTime);
     js = USER_SCRIPTS_AT_DOCUMENT_END_WRAPPER_JS_SOURCE.replace(PluginScriptsUtil.VAR_PLACEHOLDER_VALUE, js);
@@ -122,13 +141,17 @@ public class UserContentController {
       if (!contentWorlds.contains(contentWorld)) {
         contentWorlds.add(contentWorld);
 
+        StringBuilder pluginScriptsSource = new StringBuilder();
         LinkedHashSet<PluginScript> pluginScriptsRequired = this.getPluginScriptsRequiredInAllContentWorlds();
         for (PluginScript script : pluginScriptsRequired) {
-          sourceWrapped.append(";").append(script.getSource());
+          pluginScriptsSource.append(script.getSource());
         }
+        String contentWorldCreatorCode = CONTENT_WORLDS_GENERATOR_JS_SOURCE
+                .replace(PluginScriptsUtil.VAR_CONTENT_WORLD_NAME_ARRAY, "'" + escapeContentWorldName(contentWorld.getName()) + "'")
+                .replace(PluginScriptsUtil.VAR_JSON_SOURCE_ENCODED, escapeCode(pluginScriptsSource.toString()));
+        sourceWrapped.append(contentWorldCreatorCode).append(";");
       }
-      sourceWrapped.append(source);
-      return wrapSourceCodeInContentWorld(contentWorld, sourceWrapped.toString());
+      return sourceWrapped.append(wrapSourceCodeInContentWorld(contentWorld, source)).toString();
     }
     return source;
   }
@@ -156,10 +179,38 @@ public class UserContentController {
     return new LinkedHashSet<>(this.userOnlyScripts.get(injectionTime));
   }
 
+  private void updateContentWorldsCreatorScript() {
+    String source = generateContentWorldsCreatorCode();
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      if (contentWorldsCreatorScript != null) {
+        contentWorldsCreatorScript.remove();
+      }
+      if (!source.isEmpty() && webView != null) {
+        contentWorldsCreatorScript = WebViewCompat.addDocumentStartJavaScript(
+                webView,
+                source,
+                new HashSet<String>() {{
+                  add("*");
+                }}
+        );
+      }
+    }
+  }
+
   public boolean addUserOnlyScript(UserScript userOnlyScript) {
     ContentWorld contentWorld = userOnlyScript.getContentWorld();
     if (contentWorld != null) {
       contentWorlds.add(contentWorld);
+    }
+    this.updateContentWorldsCreatorScript();
+    if (webView != null && userOnlyScript.getInjectionTime() == UserScriptInjectionTime.AT_DOCUMENT_START
+            && WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      ScriptHandler scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+              webView,
+              wrapSourceCodeInContentWorld(userOnlyScript.getContentWorld(), userOnlyScript.getSource()),
+              userOnlyScript.getAllowedOriginRules()
+      );
+      this.scriptHandlerMap.put(userOnlyScript, scriptHandler);
     }
     return this.userOnlyScripts.get(userOnlyScript.getInjectionTime()).add(userOnlyScript);
   }
@@ -171,6 +222,14 @@ public class UserContentController {
   }
 
   public boolean removeUserOnlyScript(UserScript userOnlyScript) {
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      ScriptHandler scriptHandler = this.scriptHandlerMap.get(userOnlyScript);
+      if (scriptHandler != null) {
+        scriptHandler.remove();
+        this.scriptHandlerMap.remove(userOnlyScript);
+      }
+      this.updateContentWorldsCreatorScript();
+    }
     return this.userOnlyScripts.get(userOnlyScript.getInjectionTime()).remove(userOnlyScript);
   }
 
@@ -180,6 +239,15 @@ public class UserContentController {
   }
 
   public void removeAllUserOnlyScripts() {
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      for (UserScript userOnlyScript : this.userOnlyScripts.get(UserScriptInjectionTime.AT_DOCUMENT_START)) {
+        ScriptHandler scriptHandler = this.scriptHandlerMap.get(userOnlyScript);
+        if (scriptHandler != null) {
+          scriptHandler.remove();
+          this.scriptHandlerMap.remove(userOnlyScript);
+        }
+      }
+    }
     this.userOnlyScripts.get(UserScriptInjectionTime.AT_DOCUMENT_START).clear();
     this.userOnlyScripts.get(UserScriptInjectionTime.AT_DOCUMENT_END).clear();
   }
@@ -204,6 +272,16 @@ public class UserContentController {
     if (contentWorld != null) {
       contentWorlds.add(contentWorld);
     }
+    this.updateContentWorldsCreatorScript();
+    if (webView != null && pluginScript.getInjectionTime() == UserScriptInjectionTime.AT_DOCUMENT_START
+            && WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      ScriptHandler scriptHandler = WebViewCompat.addDocumentStartJavaScript(
+              webView,
+              wrapSourceCodeInContentWorld(pluginScript.getContentWorld(), pluginScript.getSource()),
+              pluginScript.getAllowedOriginRules()
+      );
+      this.scriptHandlerMap.put(pluginScript, scriptHandler);
+    }
     return this.pluginScripts.get(pluginScript.getInjectionTime()).add(pluginScript);
   }
 
@@ -214,10 +292,27 @@ public class UserContentController {
   }
 
   public boolean removePluginScript(PluginScript pluginScript) {
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      ScriptHandler scriptHandler = this.scriptHandlerMap.get(pluginScript);
+      if (scriptHandler != null) {
+        scriptHandler.remove();
+        this.scriptHandlerMap.remove(pluginScript);
+      }
+      this.updateContentWorldsCreatorScript();
+    }
     return this.pluginScripts.get(pluginScript.getInjectionTime()).remove(pluginScript);
   }
 
   public void removeAllPluginScripts() {
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+      for (PluginScript pluginScript : this.pluginScripts.get(UserScriptInjectionTime.AT_DOCUMENT_START)) {
+        ScriptHandler scriptHandler = this.scriptHandlerMap.get(pluginScript);
+        if (scriptHandler != null) {
+          scriptHandler.remove();
+          this.scriptHandlerMap.remove(pluginScript);
+        }
+      }
+    }
     this.pluginScripts.get(UserScriptInjectionTime.AT_DOCUMENT_START).clear();
     this.pluginScripts.get(UserScriptInjectionTime.AT_DOCUMENT_END).clear();
   }
@@ -320,9 +415,33 @@ public class UserContentController {
           "}";
 
   private static final String CONTENT_WORLDS_GENERATOR_JS_SOURCE = "(function() {" +
-          "  var contentWorldNames = [" + PluginScriptsUtil.VAR_CONTENT_WORLD_NAME_ARRAY + "];" +
-          "  for (var contentWorldName of contentWorldNames) {" +
-          "    var iframeId = '" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_' + contentWorldName;" +
+          "  var interval = setInterval(function() {" +
+          "    if (document.body == null) {return;}" +
+          "    var contentWorldNames = [" + PluginScriptsUtil.VAR_CONTENT_WORLD_NAME_ARRAY + "];" +
+          "    for (var contentWorldName of contentWorldNames) {" +
+          "      var iframeId = '" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_' + contentWorldName;" +
+          "      var iframe = document.getElementById(iframeId);" +
+          "      if (iframe == null) {" +
+          "        iframe = document.createElement('iframe');" +
+          "        iframe.id = iframeId;" +
+          "        iframe.style = 'display: none; z-index: 0; position: absolute; width: 0px; height: 0px';" +
+          "        document.body.append(iframe);" +
+          "      }" +
+          "      if (iframe.contentWindow.document.getElementById('" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_plugin_scripts') == null) {" +
+          "        var script = iframe.contentWindow.document.createElement('script');" +
+          "        script.id = '" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_plugin_scripts';" +
+          "        script.innerHTML = " + PluginScriptsUtil.VAR_JSON_SOURCE_ENCODED + ";" +
+          "        iframe.contentWindow.document.body.append(script);" +
+          "      }" +
+          "    }" +
+          "    clearInterval(interval);" +
+          "  });" +
+          "})();";
+
+  private static final String CONTENT_WORLD_WRAPPER_JS_SOURCE = "(function() {" +
+          "  var interval = setInterval(function() {" +
+          "    if (document.body == null) {return;}" +
+          "    var iframeId = '" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_" + PluginScriptsUtil.VAR_CONTENT_WORLD_NAME + "';" +
           "    var iframe = document.getElementById(iframeId);" +
           "    if (iframe == null) {" +
           "      iframe = document.createElement('iframe');" +
@@ -330,27 +449,27 @@ public class UserContentController {
           "      iframe.style = 'display: none; z-index: 0; position: absolute; width: 0px; height: 0px';" +
           "      document.body.append(iframe);" +
           "    }" +
+          "    if (iframe.contentWindow.document.querySelector('#" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_plugin_scripts') == null) {" +
+          "      return;" +
+          "    }" +
           "    var script = iframe.contentWindow.document.createElement('script');" +
-          "    script.innerHTML = "+ PluginScriptsUtil.VAR_JSON_SOURCE_ENCODED + ";" +
+          "    script.innerHTML = " + PluginScriptsUtil.VAR_JSON_SOURCE_ENCODED + ";" +
           "    iframe.contentWindow.document.body.append(script);" +
-          "  }" +
-          "})();";
-
-  private static final String CONTENT_WORLD_WRAPPER_JS_SOURCE = "(function() {" +
-          "  var iframeId = '" + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + "_" + PluginScriptsUtil.VAR_CONTENT_WORLD_NAME + "';" +
-          "  var iframe = document.getElementById(iframeId);" +
-          "  if (iframe == null) {" +
-          "    iframe = document.createElement('iframe');" +
-          "    iframe.id = iframeId;" +
-          "    iframe.style = 'display: none; z-index: 0; position: absolute; width: 0px; height: 0px';" +
-          "    document.body.append(iframe);" +
-          "  }" +
-          "  var script = iframe.contentWindow.document.createElement('script');" +
-          "  script.innerHTML = "+ PluginScriptsUtil.VAR_JSON_SOURCE_ENCODED + ";" +
-          "  iframe.contentWindow.document.body.append(script);" +
+          "    clearInterval(interval);" +
+          "  });" +
           "})();";
 
   private static final String DOCUMENT_READY_WRAPPER_JS_SOURCE = "if (document.readyState === 'interactive' || document.readyState === 'complete') { " +
           "  " + PluginScriptsUtil.VAR_PLACEHOLDER_VALUE +
           "}";
+
+  @Override
+  public void dispose() {
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT) && contentWorldsCreatorScript != null) {
+      contentWorldsCreatorScript.remove();
+    }
+    removeAllUserOnlyScripts();
+    removeAllPluginScripts();
+    webView = null;
+  }
 }

@@ -12,7 +12,8 @@ public class InterceptAjaxRequestJS {
           InterceptAjaxRequestJS.INTERCEPT_AJAX_REQUEST_JS_SOURCE,
           UserScriptInjectionTime.AT_DOCUMENT_START,
           null,
-          true
+          true,
+          null
   );
 
   public static final String INTERCEPT_AJAX_REQUEST_JS_SOURCE = "(function(ajax) {" +
@@ -197,7 +198,7 @@ public class InterceptAjaxRequestJS {
           "        };" +
           "        window." + JavaScriptBridgeJS.JAVASCRIPT_BRIDGE_NAME + ".callHandler('shouldInterceptAjaxRequest', ajaxRequest).then(function(result) {" +
           "          if (result != null) {" +
-          "            switch (result.action) {" +
+          "            switch (result) {" +
           "              case 0:" +
           "                self.abort();" +
           "                return;" +
