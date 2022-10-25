@@ -1469,28 +1469,44 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
         if navigationAction.request.url != nil {
             
             if let useShouldOverrideUrlLoading = options?.useShouldOverrideUrlLoading, useShouldOverrideUrlLoading {
-                shouldOverrideUrlLoading(navigationAction: navigationAction, result: { (result) -> Void in
-                    if result is FlutterError {
-                        print((result as! FlutterError).message ?? "")
+                var decisionHandlerCalled = false
+                
+                let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+                decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+                    if !decisionHandlerCalled {
+                        decisionHandlerCalled = true
                         decisionHandler(.allow)
-                        return
                     }
-                    else if (result as? NSObject) == FlutterMethodNotImplemented {
-                        decisionHandler(.allow)
-                        return
-                    }
-                    else {
-                        var response: [String: Any]
-                        if let r = result {
-                            response = r as! [String: Any]
-                            let action = response["action"] as? Int
-                            let navigationActionPolicy = WKNavigationActionPolicy.init(rawValue: action ?? WKNavigationActionPolicy.cancel.rawValue) ??
-                                WKNavigationActionPolicy.cancel
-                            decisionHandler(navigationActionPolicy)
-                            return;
+                }
+                self.shouldOverrideUrlLoading(navigationAction: navigationAction, result: { (result) -> Void in
+                    decisionHandlerCrashAvoider.run = { () -> Void in
+                        if decisionHandlerCalled {
+                            return
                         }
-                        decisionHandler(.allow)
+                        decisionHandlerCalled = true
+                        if result is FlutterError {
+                            print((result as! FlutterError).message ?? "")
+                            decisionHandler(.allow)
+                            return
+                        }
+                        else if (result as? NSObject) == FlutterMethodNotImplemented {
+                            decisionHandler(.allow)
+                            return
+                        }
+                        else {
+                            var response: [String: Any]
+                            if let r = result {
+                                response = r as! [String: Any]
+                                let action = response["action"] as? Int
+                                let navigationActionPolicy = WKNavigationActionPolicy.init(rawValue: action ?? WKNavigationActionPolicy.cancel.rawValue) ??
+                                WKNavigationActionPolicy.cancel
+                                decisionHandler(navigationActionPolicy)
+                                return;
+                            }
+                            decisionHandler(.allow)
+                        }
                     }
+                    decisionHandlerCrashAvoider.run()
                 })
                 return
                 
@@ -1512,33 +1528,49 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
         let useOnNavigationResponse = options?.useOnNavigationResponse
         
         if useOnNavigationResponse != nil, useOnNavigationResponse! {
+            var decisionHandlerCalled = false
+            
+            let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+            decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+                if !decisionHandlerCalled {
+                    decisionHandlerCalled = true
+                    decisionHandler(.allow)
+                }
+            }
             onNavigationResponse(navigationResponse: navigationResponse, result: { (result) -> Void in
-                if result is FlutterError {
-                    print((result as! FlutterError).message ?? "")
-                    decisionHandler(.allow)
-                    return
-                }
-                else if (result as? NSObject) == FlutterMethodNotImplemented {
-                    decisionHandler(.allow)
-                    return
-                }
-                else {
-                    var response: [String: Any]
-                    if let r = result {
-                        response = r as! [String: Any]
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 0;
-                        switch action {
+                decisionHandlerCrashAvoider.run = { () -> Void in
+                    if decisionHandlerCalled {
+                        return
+                    }
+                    decisionHandlerCalled = true
+                    if result is FlutterError {
+                        print((result as! FlutterError).message ?? "")
+                        decisionHandler(.allow)
+                        return
+                    }
+                    else if (result as? NSObject) == FlutterMethodNotImplemented {
+                        decisionHandler(.allow)
+                        return
+                    }
+                    else {
+                        var response: [String: Any]
+                        if let r = result {
+                            response = r as! [String: Any]
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 0;
+                            switch action {
                             case 1:
                                 decisionHandler(.allow)
                                 break
                             default:
                                 decisionHandler(.cancel)
+                            }
+                            return;
                         }
-                        return;
+                        decisionHandler(.allow)
                     }
-                    decisionHandler(.allow)
                 }
+                decisionHandlerCrashAvoider.run()
             })
         }
         
@@ -1633,6 +1665,7 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
             return
         }
         
+        var completionHandlerCalled = false
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodHTTPBasic ||
             challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodDefault ||
             challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodHTTPDigest ||
@@ -1642,21 +1675,34 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
             let prot = challenge.protectionSpace.protocol
             let realm = challenge.protectionSpace.realm
             let port = challenge.protectionSpace.port
+            
+            let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+            decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+                if !completionHandlerCalled {
+                    completionHandlerCalled = true
+                    completionHandler(.performDefaultHandling, nil)
+                }
+            }
             onReceivedHttpAuthRequest(challenge: challenge, result: {(result) -> Void in
-                if result is FlutterError {
-                    print((result as! FlutterError).message ?? "")
-                    completionHandler(.performDefaultHandling, nil)
-                }
-                else if (result as? NSObject) == FlutterMethodNotImplemented {
-                    completionHandler(.performDefaultHandling, nil)
-                }
-                else {
-                    var response: [String: Any]
-                    if let r = result {
-                        response = r as! [String: Any]
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 0;
-                        switch action {
+                decisionHandlerCrashAvoider.run = { () -> Void in
+                    if completionHandlerCalled {
+                        return
+                    }
+                    completionHandlerCalled = true
+                    if result is FlutterError {
+                        print((result as! FlutterError).message ?? "")
+                        completionHandler(.performDefaultHandling, nil)
+                    }
+                    else if (result as? NSObject) == FlutterMethodNotImplemented {
+                        completionHandler(.performDefaultHandling, nil)
+                    }
+                    else {
+                        var response: [String: Any]
+                        if let r = result {
+                            response = r as! [String: Any]
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 0;
+                            switch action {
                             case 0:
                                 InAppWebView.credentialsProposed = []
                                 // used .performDefaultHandling to mantain consistency with Android
@@ -1676,7 +1722,7 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                                 if InAppWebView.credentialsProposed.count == 0, let credentialStore = CredentialDatabase.credentialStore {
                                     for (protectionSpace, credentials) in credentialStore.allCredentials {
                                         if protectionSpace.host == host && protectionSpace.realm == realm &&
-                                        protectionSpace.protocol == prot && protectionSpace.port == port {
+                                            protectionSpace.protocol == prot && protectionSpace.port == port {
                                             for credential in credentials {
                                                 InAppWebView.credentialsProposed.append(credential.value)
                                             }
@@ -1698,11 +1744,13 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                             default:
                                 InAppWebView.credentialsProposed = []
                                 completionHandler(.performDefaultHandling, nil)
+                            }
+                            return;
                         }
-                        return;
+                        completionHandler(.performDefaultHandling, nil)
                     }
-                    completionHandler(.performDefaultHandling, nil)
                 }
+                decisionHandlerCrashAvoider.run()
             })
         }
         else if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
@@ -1712,21 +1760,34 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                 return
             }
 
+            let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+            decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+                if !completionHandlerCalled {
+                    completionHandlerCalled = true
+                    completionHandler(.performDefaultHandling, nil)
+                }
+            }
+            
             onReceivedServerTrustAuthRequest(challenge: challenge, result: {(result) -> Void in
-                if result is FlutterError {
-                    print((result as! FlutterError).message ?? "")
-                    completionHandler(.performDefaultHandling, nil)
-                }
-                else if (result as? NSObject) == FlutterMethodNotImplemented {
-                    completionHandler(.performDefaultHandling, nil)
-                }
-                else {
-                    var response: [String: Any]
-                    if let r = result {
-                        response = r as! [String: Any]
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 0;
-                        switch action {
+                decisionHandlerCrashAvoider.run = { () -> Void in
+                    if completionHandlerCalled {
+                        return
+                    }
+                    completionHandlerCalled = true
+                    if result is FlutterError {
+                        print((result as! FlutterError).message ?? "")
+                        completionHandler(.performDefaultHandling, nil)
+                    }
+                    else if (result as? NSObject) == FlutterMethodNotImplemented {
+                        completionHandler(.performDefaultHandling, nil)
+                    }
+                    else {
+                        var response: [String: Any]
+                        if let r = result {
+                            response = r as! [String: Any]
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 0;
+                            switch action {
                             case 0:
                                 InAppWebView.credentialsProposed = []
                                 completionHandler(.cancelAuthenticationChallenge, nil)
@@ -1740,29 +1801,44 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                             default:
                                 InAppWebView.credentialsProposed = []
                                 completionHandler(.performDefaultHandling, nil)
+                            }
+                            return;
                         }
-                        return;
+                        completionHandler(.performDefaultHandling, nil)
                     }
-                    completionHandler(.performDefaultHandling, nil)
                 }
+                decisionHandlerCrashAvoider.run()
             })
         }
         else if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodClientCertificate {
+            let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+            decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+                if !completionHandlerCalled {
+                    completionHandlerCalled = true
+                    completionHandler(.performDefaultHandling, nil)
+                }
+            }
+            
             onReceivedClientCertRequest(challenge: challenge, result: {(result) -> Void in
-                if result is FlutterError {
-                    print((result as! FlutterError).message ?? "")
-                    completionHandler(.performDefaultHandling, nil)
-                }
-                else if (result as? NSObject) == FlutterMethodNotImplemented {
-                    completionHandler(.performDefaultHandling, nil)
-                }
-                else {
-                    var response: [String: Any]
-                    if let r = result {
-                        response = r as! [String: Any]
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 0;
-                        switch action {
+                decisionHandlerCrashAvoider.run = { () -> Void in
+                    if completionHandlerCalled {
+                        return
+                    }
+                    completionHandlerCalled = true
+                    if result is FlutterError {
+                        print((result as! FlutterError).message ?? "")
+                        completionHandler(.performDefaultHandling, nil)
+                    }
+                    else if (result as? NSObject) == FlutterMethodNotImplemented {
+                        completionHandler(.performDefaultHandling, nil)
+                    }
+                    else {
+                        var response: [String: Any]
+                        if let r = result {
+                            response = r as! [String: Any]
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 0;
+                            switch action {
                             case 0:
                                 completionHandler(.cancelAuthenticationChallenge, nil)
                                 break
@@ -1770,21 +1846,19 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                                 let certificatePath = response["certificatePath"] as! String;
                                 let certificatePassword = response["certificatePassword"] as? String ?? "";
                                 
+                                var path: String = certificatePath
                                 do {
-                                    let path = try Util.getAbsPathAsset(assetFilePath: certificatePath)
-                                    let PKCS12Data = NSData(contentsOfFile: path)!
-                                    
-                                    if let identityAndTrust: IdentityAndTrust = self.extractIdentity(PKCS12Data: PKCS12Data, password: certificatePassword) {
-                                        let urlCredential: URLCredential = URLCredential(
-                                            identity: identityAndTrust.identityRef,
-                                            certificates: identityAndTrust.certArray as? [AnyObject],
-                                            persistence: URLCredential.Persistence.forSession);
-                                        completionHandler(.useCredential, urlCredential)
-                                    } else {
-                                        completionHandler(.performDefaultHandling, nil)
-                                    }
-                                } catch {
-                                    print(error.localizedDescription)
+                                    path = try Util.getAbsPathAsset(assetFilePath: certificatePath)
+                                } catch {}
+                                
+                                if let PKCS12Data = NSData(contentsOfFile: path),
+                                   let identityAndTrust: IdentityAndTrust = self.extractIdentity(PKCS12Data: PKCS12Data, password: certificatePassword) {
+                                    let urlCredential: URLCredential = URLCredential(
+                                        identity: identityAndTrust.identityRef,
+                                        certificates: identityAndTrust.certArray as? [AnyObject],
+                                        persistence: URLCredential.Persistence.forSession);
+                                    completionHandler(.useCredential, urlCredential)
+                                } else {
                                     completionHandler(.performDefaultHandling, nil)
                                 }
                                 
@@ -1794,11 +1868,13 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                                 break
                             default:
                                 completionHandler(.performDefaultHandling, nil)
+                            }
+                            return;
                         }
-                        return;
+                        completionHandler(.performDefaultHandling, nil)
                     }
-                    completionHandler(.performDefaultHandling, nil)
                 }
+                decisionHandlerCrashAvoider.run()
             })
         }
         else {
@@ -1873,40 +1949,55 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
             return
         }
         
-        onJsAlert(frame: frame, message: message, result: {(result) -> Void in
-            if result is FlutterError {
-                print((result as! FlutterError).message ?? "")
+        var completionHandlerCalled = false
+        let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+        decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+            if !completionHandlerCalled {
+                completionHandlerCalled = true
                 completionHandler()
             }
-            else if (result as? NSObject) == FlutterMethodNotImplemented {
-                self.createAlertDialog(message: message, responseMessage: nil, confirmButtonTitle: nil, completionHandler: completionHandler)
-            }
-            else {
-                let response: [String: Any]
-                var responseMessage: String?;
-                var confirmButtonTitle: String?;
-                
-                if let r = result {
-                    response = r as! [String: Any]
-                    responseMessage = response["message"] as? String
-                    confirmButtonTitle = response["confirmButtonTitle"] as? String
-                    let handledByClient = response["handledByClient"] as? Bool
-                    if handledByClient != nil, handledByClient! {
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 1;
-                        switch action {
+        }
+        onJsAlert(frame: frame, message: message, result: {(result) -> Void in
+            decisionHandlerCrashAvoider.run = { () -> Void in
+                if completionHandlerCalled {
+                    return
+                }
+                completionHandlerCalled = true
+                if result is FlutterError {
+                    print((result as! FlutterError).message ?? "")
+                    completionHandler()
+                }
+                else if (result as? NSObject) == FlutterMethodNotImplemented {
+                    self.createAlertDialog(message: message, responseMessage: nil, confirmButtonTitle: nil, completionHandler: completionHandler)
+                }
+                else {
+                    let response: [String: Any]
+                    var responseMessage: String?;
+                    var confirmButtonTitle: String?;
+                    
+                    if let r = result {
+                        response = r as! [String: Any]
+                        responseMessage = response["message"] as? String
+                        confirmButtonTitle = response["confirmButtonTitle"] as? String
+                        let handledByClient = response["handledByClient"] as? Bool
+                        if handledByClient != nil, handledByClient! {
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 1;
+                            switch action {
                             case 0:
                                 completionHandler()
                                 break
                             default:
                                 completionHandler()
+                            }
+                            return;
                         }
-                        return;
                     }
+                    
+                    self.createAlertDialog(message: message, responseMessage: responseMessage, confirmButtonTitle: confirmButtonTitle, completionHandler: completionHandler)
                 }
-                
-                self.createAlertDialog(message: message, responseMessage: responseMessage, confirmButtonTitle: confirmButtonTitle, completionHandler: completionHandler)
             }
+            decisionHandlerCrashAvoider.run()
         })
     }
     
@@ -1935,30 +2026,44 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
     public func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo,
                  completionHandler: @escaping (Bool) -> Void) {
 
-        onJsConfirm(frame: frame, message: message, result: {(result) -> Void in
-            if result is FlutterError {
-                print((result as! FlutterError).message ?? "")
+        var completionHandlerCalled = false
+        let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+        decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+            if !completionHandlerCalled {
+                completionHandlerCalled = true
                 completionHandler(false)
             }
-            else if (result as? NSObject) == FlutterMethodNotImplemented {
-                self.createConfirmDialog(message: message, responseMessage: nil, confirmButtonTitle: nil, cancelButtonTitle: nil, completionHandler: completionHandler)
-            }
-            else {
-                let response: [String: Any]
-                var responseMessage: String?;
-                var confirmButtonTitle: String?;
-                var cancelButtonTitle: String?;
-                
-                if let r = result {
-                    response = r as! [String: Any]
-                    responseMessage = response["message"] as? String
-                    confirmButtonTitle = response["confirmButtonTitle"] as? String
-                    cancelButtonTitle = response["cancelButtonTitle"] as? String
-                    let handledByClient = response["handledByClient"] as? Bool
-                    if handledByClient != nil, handledByClient! {
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 1;
-                        switch action {
+        }
+        
+        onJsConfirm(frame: frame, message: message, result: {(result) -> Void in
+            decisionHandlerCrashAvoider.run = { () -> Void in
+                if completionHandlerCalled {
+                    return
+                }
+                completionHandlerCalled = true
+                if result is FlutterError {
+                    print((result as! FlutterError).message ?? "")
+                    completionHandler(false)
+                }
+                else if (result as? NSObject) == FlutterMethodNotImplemented {
+                    self.createConfirmDialog(message: message, responseMessage: nil, confirmButtonTitle: nil, cancelButtonTitle: nil, completionHandler: completionHandler)
+                }
+                else {
+                    let response: [String: Any]
+                    var responseMessage: String?;
+                    var confirmButtonTitle: String?;
+                    var cancelButtonTitle: String?;
+                    
+                    if let r = result {
+                        response = r as! [String: Any]
+                        responseMessage = response["message"] as? String
+                        confirmButtonTitle = response["confirmButtonTitle"] as? String
+                        cancelButtonTitle = response["cancelButtonTitle"] as? String
+                        let handledByClient = response["handledByClient"] as? Bool
+                        if handledByClient != nil, handledByClient! {
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 1;
+                            switch action {
                             case 0:
                                 completionHandler(true)
                                 break
@@ -1967,12 +2072,14 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                                 break
                             default:
                                 completionHandler(false)
+                            }
+                            return;
                         }
-                        return;
                     }
+                    self.createConfirmDialog(message: message, responseMessage: responseMessage, confirmButtonTitle: confirmButtonTitle, cancelButtonTitle: cancelButtonTitle, completionHandler: completionHandler)
                 }
-                self.createConfirmDialog(message: message, responseMessage: responseMessage, confirmButtonTitle: confirmButtonTitle, cancelButtonTitle: cancelButtonTitle, completionHandler: completionHandler)
             }
+            decisionHandlerCrashAvoider.run()
         })
     }
 
@@ -2011,32 +2118,46 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
     
     public func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt message: String, defaultText defaultValue: String?, initiatedByFrame frame: WKFrameInfo,
                  completionHandler: @escaping (String?) -> Void) {
-        onJsPrompt(frame: frame, message: message, defaultValue: defaultValue, result: {(result) -> Void in
-            if result is FlutterError {
-                print((result as! FlutterError).message ?? "")
+        var completionHandlerCalled = false
+        let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+        decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+            if !completionHandlerCalled {
+                completionHandlerCalled = true
                 completionHandler(nil)
             }
-            else if (result as? NSObject) == FlutterMethodNotImplemented {
-                self.createPromptDialog(message: message, defaultValue: defaultValue, responseMessage: nil, confirmButtonTitle: nil, cancelButtonTitle: nil, value: nil, completionHandler: completionHandler)
-            }
-            else {
-                let response: [String: Any]
-                var responseMessage: String?;
-                var confirmButtonTitle: String?;
-                var cancelButtonTitle: String?;
-                var value: String?;
-                
-                if let r = result {
-                    response = r as! [String: Any]
-                    responseMessage = response["message"] as? String
-                    confirmButtonTitle = response["confirmButtonTitle"] as? String
-                    cancelButtonTitle = response["cancelButtonTitle"] as? String
-                    let handledByClient = response["handledByClient"] as? Bool
-                    value = response["value"] as? String;
-                    if handledByClient != nil, handledByClient! {
-                        var action = response["action"] as? Int
-                        action = action != nil ? action : 1;
-                        switch action {
+        }
+        
+        onJsPrompt(frame: frame, message: message, defaultValue: defaultValue, result: {(result) -> Void in
+            decisionHandlerCrashAvoider.run = { () -> Void in
+                if completionHandlerCalled {
+                    return
+                }
+                completionHandlerCalled = true
+                if result is FlutterError {
+                    print((result as! FlutterError).message ?? "")
+                    completionHandler(nil)
+                }
+                else if (result as? NSObject) == FlutterMethodNotImplemented {
+                    self.createPromptDialog(message: message, defaultValue: defaultValue, responseMessage: nil, confirmButtonTitle: nil, cancelButtonTitle: nil, value: nil, completionHandler: completionHandler)
+                }
+                else {
+                    let response: [String: Any]
+                    var responseMessage: String?;
+                    var confirmButtonTitle: String?;
+                    var cancelButtonTitle: String?;
+                    var value: String?;
+                    
+                    if let r = result {
+                        response = r as! [String: Any]
+                        responseMessage = response["message"] as? String
+                        confirmButtonTitle = response["confirmButtonTitle"] as? String
+                        cancelButtonTitle = response["cancelButtonTitle"] as? String
+                        let handledByClient = response["handledByClient"] as? Bool
+                        value = response["value"] as? String;
+                        if handledByClient != nil, handledByClient! {
+                            var action = response["action"] as? Int
+                            action = action != nil ? action : 1;
+                            switch action {
                             case 0:
                                 completionHandler(value)
                                 break
@@ -2045,13 +2166,15 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
                                 break
                             default:
                                 completionHandler(nil)
+                            }
+                            return;
                         }
-                        return;
                     }
+                    
+                    self.createPromptDialog(message: message, defaultValue: defaultValue, responseMessage: responseMessage, confirmButtonTitle: confirmButtonTitle, cancelButtonTitle: cancelButtonTitle, value: value, completionHandler: completionHandler)
                 }
-                
-                self.createPromptDialog(message: message, defaultValue: defaultValue, responseMessage: responseMessage, confirmButtonTitle: confirmButtonTitle, cancelButtonTitle: cancelButtonTitle, value: value, completionHandler: completionHandler)
             }
+            decisionHandlerCrashAvoider.run()
         })
     }
     
@@ -2169,34 +2292,50 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate, WKNavi
             return
         }
         
+        var decisionHandlerCalled = false
+        
+        let decisionHandlerCrashAvoider = DecisionHandlerCrashAvoider()
+        decisionHandlerCrashAvoider.deinitialize = { () -> Void in
+            if !decisionHandlerCalled {
+                decisionHandlerCalled = true
+                decisionHandler(false)
+            }
+        }
         shouldAllowDeprecatedTLS(challenge: challenge, result: {(result) -> Void in
-            if result is FlutterError {
-                print((result as! FlutterError).message ?? "")
-                decisionHandler(false)
-            }
-            else if (result as? NSObject) == FlutterMethodNotImplemented {
-                decisionHandler(false)
-            }
-            else {
-                var response: [String: Any]
-                if let r = result {
-                    response = r as! [String: Any]
-                    var action = response["action"] as? Int
-                    action = action != nil ? action : 0;
-                    switch action {
-                        case 0:
-                            decisionHandler(false)
-                            break
-                        case 1:
-                            decisionHandler(true)
-                            break
-                        default:
-                            decisionHandler(false)
-                    }
-                    return;
+            decisionHandlerCrashAvoider.run = { () -> Void in
+                if decisionHandlerCalled {
+                    return
                 }
-                decisionHandler(false)
+                decisionHandlerCalled = true
+                if result is FlutterError {
+                    print((result as! FlutterError).message ?? "")
+                    decisionHandler(false)
+                }
+                else if (result as? NSObject) == FlutterMethodNotImplemented {
+                    decisionHandler(false)
+                }
+                else {
+                    var response: [String: Any]
+                    if let r = result {
+                        response = r as! [String: Any]
+                        var action = response["action"] as? Int
+                        action = action != nil ? action : 0;
+                        switch action {
+                            case 0:
+                                decisionHandler(false)
+                                break
+                            case 1:
+                                decisionHandler(true)
+                                break
+                            default:
+                                decisionHandler(false)
+                        }
+                        return;
+                    }
+                    decisionHandler(false)
+                }
             }
+            decisionHandlerCrashAvoider.run()
         })
     }
     
@@ -2960,3 +3099,13 @@ if(window.\(JAVASCRIPT_BRIDGE_NAME)[\(_callHandlerID)] != null) {
         return options?.disableInputAccessoryView ?? false ? nil : super.inputAccessoryView
     }
 }
+
+class DecisionHandlerCrashAvoider {
+    public var run: () -> Void = {}
+    public var deinitialize: () -> Void = {}
+    
+    deinit {
+        deinitialize()
+    }
+}
+
