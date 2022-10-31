@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +22,8 @@ class CookieManager {
   static const MethodChannel _channel = const MethodChannel(
       'com.pichillilorenzo/flutter_inappwebview_cookiemanager');
 
+  CookieManager._();
+
   ///Contains only iOS-specific methods of [CookieManager].
   late IOSCookieManager ios;
 
@@ -33,7 +34,7 @@ class CookieManager {
 
   static CookieManager _init() {
     _channel.setMethodCallHandler(_handleMethod);
-    _instance = CookieManager();
+    _instance = CookieManager._();
     _instance!.ios = IOSCookieManager.instance();
     return _instance!;
   }
@@ -44,7 +45,6 @@ class CookieManager {
   ///The cookie being set will be ignored if it is expired.
   ///
   ///The default value of [path] is `"/"`.
-  ///If [domain] is `null`, its default value will be the domain name of [url].
   ///
   ///[iosBelow11WebViewController] could be used if you need to set a session-only cookie using JavaScript (so [isHttpOnly] cannot be set, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#restrict_access_to_cookies)
   ///on the current URL of the [WebView] managed by that controller when you need to target iOS below 11. In this case the [url] parameter is ignored.
@@ -55,39 +55,32 @@ class CookieManager {
       {required Uri url,
       required String name,
       required String value,
-      String? domain,
       String path = "/",
+      String? domain,
       int? expiresDate,
       int? maxAge,
       bool? isSecure,
       bool? isHttpOnly,
       HTTPCookieSameSitePolicy? sameSite,
       InAppWebViewController? iosBelow11WebViewController}) async {
-    if (domain == null) domain = _getDomainName(url);
-
     assert(url.toString().isNotEmpty);
     assert(name.isNotEmpty);
     assert(value.isNotEmpty);
-    assert(domain.isNotEmpty);
     assert(path.isNotEmpty);
 
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      var platformUtil = PlatformUtil();
-      var version = double.tryParse(await platformUtil.getSystemVersion());
-      if (version != null && version < 11.0) {
-        await _setCookieWithJavaScript(
-            url: url,
-            name: name,
-            value: value,
-            domain: domain,
-            path: path,
-            expiresDate: expiresDate,
-            maxAge: maxAge,
-            isSecure: isSecure,
-            sameSite: sameSite,
-            webViewController: iosBelow11WebViewController);
-        return;
-      }
+    if (await _shouldUseJavascript()) {
+      await _setCookieWithJavaScript(
+          url: url,
+          name: name,
+          value: value,
+          domain: domain,
+          path: path,
+          expiresDate: expiresDate,
+          maxAge: maxAge,
+          isSecure: isSecure,
+          sameSite: sameSite,
+          webViewController: iosBelow11WebViewController);
+      return;
     }
 
     Map<String, dynamic> args = <String, dynamic>{};
@@ -109,15 +102,16 @@ class CookieManager {
       {required Uri url,
       required String name,
       required String value,
-      required String domain,
       String path = "/",
+      String? domain,
       int? expiresDate,
       int? maxAge,
       bool? isSecure,
       HTTPCookieSameSitePolicy? sameSite,
       InAppWebViewController? webViewController}) async {
-    var cookieValue =
-        name + "=" + value + "; Domain=" + domain + "; Path=" + path;
+    var cookieValue = name + "=" + value + "; Path=" + path;
+
+    if (domain != null) cookieValue += "; Domain=" + domain;
 
     if (expiresDate != null)
       cookieValue += "; Expires=" + await _getCookieExpirationDate(expiresDate);
@@ -167,13 +161,9 @@ class CookieManager {
       InAppWebViewController? iosBelow11WebViewController}) async {
     assert(url.toString().isNotEmpty);
 
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      var platformUtil = PlatformUtil();
-      var version = double.tryParse(await platformUtil.getSystemVersion());
-      if (version != null && version < 11.0) {
-        return await _getCookiesWithJavaScript(
-            url: url, webViewController: iosBelow11WebViewController);
-      }
+    if (await _shouldUseJavascript()) {
+      return await _getCookiesWithJavaScript(
+          url: url, webViewController: iosBelow11WebViewController);
     }
 
     List<Cookie> cookies = [];
@@ -266,16 +256,12 @@ class CookieManager {
     assert(url.toString().isNotEmpty);
     assert(name.isNotEmpty);
 
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      var platformUtil = PlatformUtil();
-      var version = double.tryParse(await platformUtil.getSystemVersion());
-      if (version != null && version < 11.0) {
-        List<Cookie> cookies = await _getCookiesWithJavaScript(
-            url: url, webViewController: iosBelow11WebViewController);
-        return cookies
-            .cast<Cookie?>()
-            .firstWhere((cookie) => cookie!.name == name, orElse: () => null);
-      }
+    if (await _shouldUseJavascript()) {
+      List<Cookie> cookies = await _getCookiesWithJavaScript(
+          url: url, webViewController: iosBelow11WebViewController);
+      return cookies
+          .cast<Cookie?>()
+          .firstWhere((cookie) => cookie!.name == name, orElse: () => null);
     }
 
     Map<String, dynamic> args = <String, dynamic>{};
@@ -303,7 +289,6 @@ class CookieManager {
   ///Removes a cookie by its [name] for the given [url], [domain] and [path].
   ///
   ///The default value of [path] is `"/"`.
-  ///If [domain] is empty, its default value will be the domain name of [url].
   ///
   ///[iosBelow11WebViewController] is used for deleting the cookie (also session-only cookie) using JavaScript (cookie with `isHttpOnly` enabled cannot be deleted, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#restrict_access_to_cookies)
   ///from the current context of the [WebView] managed by that controller when you need to target iOS below 11. JavaScript must be enabled in order to work.
@@ -314,28 +299,22 @@ class CookieManager {
   Future<void> deleteCookie(
       {required Uri url,
       required String name,
-      String domain = "",
       String path = "/",
+      String? domain,
       InAppWebViewController? iosBelow11WebViewController}) async {
-    if (domain.isEmpty) domain = _getDomainName(url);
-
     assert(url.toString().isNotEmpty);
     assert(name.isNotEmpty);
 
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      var platformUtil = PlatformUtil();
-      var version = double.tryParse(await platformUtil.getSystemVersion());
-      if (version != null && version < 11.0) {
-        await _setCookieWithJavaScript(
-            url: url,
-            name: name,
-            value: "",
-            path: path,
-            domain: domain,
-            maxAge: -1,
-            webViewController: iosBelow11WebViewController);
-        return;
-      }
+    if (await _shouldUseJavascript()) {
+      await _setCookieWithJavaScript(
+          url: url,
+          name: name,
+          value: "",
+          path: path,
+          domain: domain,
+          maxAge: -1,
+          webViewController: iosBelow11WebViewController);
+      return;
     }
 
     Map<String, dynamic> args = <String, dynamic>{};
@@ -349,7 +328,6 @@ class CookieManager {
   ///Removes all cookies for the given [url], [domain] and [path].
   ///
   ///The default value of [path] is `"/"`.
-  ///If [domain] is empty, its default value will be the domain name of [url].
   ///
   ///[iosBelow11WebViewController] is used for deleting the cookies (also session-only cookies) using JavaScript (cookies with `isHttpOnly` enabled cannot be deleted, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#restrict_access_to_cookies)
   ///from the current context of the [WebView] managed by that controller when you need to target iOS below 11. JavaScript must be enabled in order to work.
@@ -359,31 +337,25 @@ class CookieManager {
   ///to delete the cookies (session-only cookies and cookies with `isHttpOnly` enabled won't be deleted!).
   Future<void> deleteCookies(
       {required Uri url,
-      String domain = "",
       String path = "/",
+      String? domain,
       InAppWebViewController? iosBelow11WebViewController}) async {
-    if (domain.isEmpty) domain = _getDomainName(url);
-
     assert(url.toString().isNotEmpty);
 
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
-      var platformUtil = PlatformUtil();
-      var version = double.tryParse(await platformUtil.getSystemVersion());
-      if (version != null && version < 11.0) {
-        List<Cookie> cookies = await _getCookiesWithJavaScript(
-            url: url, webViewController: iosBelow11WebViewController);
-        for (var i = 0; i < cookies.length; i++) {
-          await _setCookieWithJavaScript(
-              url: url,
-              name: cookies[i].name,
-              value: "",
-              path: path,
-              domain: domain,
-              maxAge: -1,
-              webViewController: iosBelow11WebViewController);
-        }
-        return;
+    if (await _shouldUseJavascript()) {
+      List<Cookie> cookies = await _getCookiesWithJavaScript(
+          url: url, webViewController: iosBelow11WebViewController);
+      for (var i = 0; i < cookies.length; i++) {
+        await _setCookieWithJavaScript(
+            url: url,
+            name: cookies[i].name,
+            value: "",
+            path: path,
+            domain: domain,
+            maxAge: -1,
+            webViewController: iosBelow11WebViewController);
       }
+      return;
     }
 
     Map<String, dynamic> args = <String, dynamic>{};
@@ -401,13 +373,8 @@ class CookieManager {
     await _channel.invokeMethod('deleteAllCookies', args);
   }
 
-  String _getDomainName(Uri url) {
-    String domain = url.host;
-    return domain.startsWith("www.") ? domain.substring(4) : domain;
-  }
-
   Future<String> _getCookieExpirationDate(int expiresDate) async {
-    var platformUtil = PlatformUtil();
+    var platformUtil = PlatformUtil.instance();
     var dateTime = DateTime.fromMillisecondsSinceEpoch(expiresDate).toUtc();
     return await platformUtil.formatDate(
         date: dateTime,
@@ -415,11 +382,22 @@ class CookieManager {
         locale: 'en_US',
         timezone: 'GMT');
   }
+
+  Future<bool> _shouldUseJavascript() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final platformUtil = PlatformUtil.instance();
+      final systemVersion = await platformUtil.getSystemVersion();
+      return systemVersion.compareTo("11") == -1;
+    }
+    return false;
+  }
 }
 
 ///Class that contains only iOS-specific methods of [CookieManager].
 class IOSCookieManager {
   static IOSCookieManager? _instance;
+
+  IOSCookieManager._();
 
   ///Gets the [IOSCookieManager] shared instance.
   static IOSCookieManager instance() {
@@ -427,7 +405,7 @@ class IOSCookieManager {
   }
 
   static IOSCookieManager _init() {
-    _instance = IOSCookieManager();
+    _instance = IOSCookieManager._();
     return _instance!;
   }
 

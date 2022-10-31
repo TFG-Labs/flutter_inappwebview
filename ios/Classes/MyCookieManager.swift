@@ -35,7 +35,6 @@ class MyCookieManager: NSObject, FlutterPlugin {
                 let url = arguments!["url"] as! String
                 let name = arguments!["name"] as! String
                 let value = arguments!["value"] as! String
-                let domain = arguments!["domain"] as! String
                 let path = arguments!["path"] as! String
                 
                 var expiresDate: Int64?
@@ -47,12 +46,13 @@ class MyCookieManager: NSObject, FlutterPlugin {
                 let isSecure = arguments!["isSecure"] as? Bool
                 let isHttpOnly = arguments!["isHttpOnly"] as? Bool
                 let sameSite = arguments!["sameSite"] as? String
+                let domain = arguments!["domain"] as? String
                 
                 MyCookieManager.setCookie(url: url,
                                           name: name,
                                           value: value,
-                                          domain: domain,
                                           path: path,
+                                          domain: domain,
                                           expiresDate: expiresDate,
                                           maxAge: maxAge,
                                           isSecure: isSecure,
@@ -70,15 +70,15 @@ class MyCookieManager: NSObject, FlutterPlugin {
             case "deleteCookie":
                 let url = arguments!["url"] as! String
                 let name = arguments!["name"] as! String
-                let domain = arguments!["domain"] as! String
                 let path = arguments!["path"] as! String
-                MyCookieManager.deleteCookie(url: url, name: name, domain: domain, path: path, result: result)
+                let domain = arguments!["domain"] as? String
+                MyCookieManager.deleteCookie(url: url, name: name, path: path, domain: domain, result: result)
                 break;
             case "deleteCookies":
                 let url = arguments!["url"] as! String
-                let domain = arguments!["domain"] as! String
                 let path = arguments!["path"] as! String
-                MyCookieManager.deleteCookies(url: url, domain: domain, path: path, result: result)
+                let domain = arguments!["domain"] as? String
+                MyCookieManager.deleteCookies(url: url, path: path, domain: domain, result: result)
                 break;
             case "deleteAllCookies":
                 MyCookieManager.deleteAllCookies(result: result)
@@ -92,8 +92,8 @@ class MyCookieManager: NSObject, FlutterPlugin {
     public static func setCookie(url: String,
                           name: String,
                           value: String,
-                          domain: String,
                           path: String,
+                          domain: String?,
                           expiresDate: Int64?,
                           maxAge: Int64?,
                           isSecure: Bool?,
@@ -109,8 +109,12 @@ class MyCookieManager: NSObject, FlutterPlugin {
         properties[.originURL] = url
         properties[.name] = name
         properties[.value] = value
-        properties[.domain] = domain
         properties[.path] = path
+        
+        if domain != nil {
+            properties[.domain] = domain
+        }
+
         if expiresDate != nil {
             // convert from milliseconds
             properties[.expires] = Date(timeIntervalSince1970: TimeInterval(Double(expiresDate!)/1000))
@@ -235,25 +239,30 @@ class MyCookieManager: NSObject, FlutterPlugin {
         }
     }
     
-    public static func deleteCookie(url: String, name: String, domain: String, path: String, result: @escaping FlutterResult) {
+    public static func deleteCookie(url: String, name: String, path: String, domain: String?, result: @escaping FlutterResult) {
         guard let httpCookieStore = MyCookieManager.httpCookieStore else {
             result(false)
             return
         }
-    
+
+        var domain = domain
         httpCookieStore.getAllCookies { (cookies) in
             for cookie in cookies {
-                var originURL = ""
+                var originURL = url
                 if cookie.properties![.originURL] is String {
                     originURL = cookie.properties![.originURL] as! String
                 }
                 else if cookie.properties![.originURL] is URL {
                     originURL = (cookie.properties![.originURL] as! URL).absoluteString
                 }
-                if (!originURL.isEmpty && originURL != url) {
-                    continue
+                if domain == nil, let domainUrl = URL(string: originURL) {
+                    if #available(iOS 16.0, *) {
+                        domain = domainUrl.host()
+                    } else {
+                        domain = domainUrl.host
+                    }
                 }
-                if (cookie.domain == domain || cookie.domain == ".\(domain)" || ".\(cookie.domain)" == domain) && cookie.name == name && cookie.path == path {
+                if let domain = domain, cookie.domain == domain, cookie.name == name, cookie.path == path {
                     httpCookieStore.delete(cookie, completionHandler: {
                         result(true)
                     })
@@ -264,25 +273,30 @@ class MyCookieManager: NSObject, FlutterPlugin {
         }
     }
     
-    public static func deleteCookies(url: String, domain: String, path: String, result: @escaping FlutterResult) {
+    public static func deleteCookies(url: String, path: String, domain: String?, result: @escaping FlutterResult) {
         guard let httpCookieStore = MyCookieManager.httpCookieStore else {
             result(false)
             return
         }
         
+        var domain = domain
         httpCookieStore.getAllCookies { (cookies) in
             for cookie in cookies {
-                var originURL = ""
+                var originURL = url
                 if cookie.properties![.originURL] is String {
                     originURL = cookie.properties![.originURL] as! String
                 }
-                else if cookie.properties![.originURL] is URL{
+                else if cookie.properties![.originURL] is URL {
                     originURL = (cookie.properties![.originURL] as! URL).absoluteString
                 }
-                if (!originURL.isEmpty && originURL != url) {
-                    continue
+                if domain == nil, let domainUrl = URL(string: originURL) {
+                    if #available(iOS 16.0, *) {
+                        domain = domainUrl.host()
+                    } else {
+                        domain = domainUrl.host
+                    }
                 }
-                if (cookie.domain == domain || cookie.domain == ".\(domain)" || ".\(cookie.domain)" == domain) && cookie.path == path {
+                if let domain = domain, cookie.domain == domain, cookie.path == path {
                     httpCookieStore.delete(cookie, completionHandler: nil)
                 }
             }
