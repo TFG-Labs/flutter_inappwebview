@@ -381,11 +381,6 @@ class _InAppWebViewState extends State<InAppWebView> {
       var useHybridComposition =
           widget.initialOptions?.android.useHybridComposition ?? false;
 
-      if (!useHybridComposition && widget.pullToRefreshController != null) {
-        throw new Exception(
-            "To use the pull-to-refresh feature, useHybridComposition Android-specific option MUST be true!");
-      }
-
       return PlatformViewLink(
         viewType: 'com.pichillilorenzo/flutter_inappwebview',
         surfaceFactory: (
@@ -471,19 +466,13 @@ class _InAppWebViewState extends State<InAppWebView> {
     required Map<String, dynamic> creationParams,
   }) {
     if (hybridComposition) {
-      try {
-        // use PlatformViewsService as dynamic for Flutter 2 lower versions
-        return (PlatformViewsService as dynamic).initExpensiveAndroidView(
-          id: id,
-          viewType: viewType,
-          layoutDirection: layoutDirection,
-          creationParams: creationParams,
-          creationParamsCodec: const StandardMessageCodec(),
-        );
-      } catch (_) {
-        // NoSuchMethodError
-        // ignore and use initSurfaceAndroidView
-      }
+      return PlatformViewsService.initExpensiveAndroidView(
+        id: id,
+        viewType: viewType,
+        layoutDirection: layoutDirection,
+        creationParams: creationParams,
+        creationParamsCodec: const StandardMessageCodec(),
+      );
     }
     return PlatformViewsService.initSurfaceAndroidView(
       id: id,
