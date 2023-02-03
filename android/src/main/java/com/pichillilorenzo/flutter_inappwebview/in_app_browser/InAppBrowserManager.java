@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import android.util.Log;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -87,6 +88,15 @@ public class InAppBrowserManager implements MethodChannel.MethodCallHandler {
           result.success(false);
         }
         break;
+      case "close":
+        if (plugin != null && plugin.activity != null) {
+          if(plugin.activity instanceof Activity){
+            Activity activity = (Activity) plugin.activity;
+            activity.finish();
+            result.success(true);
+          }
+        }
+        break;  
       default:
         result.notImplemented();
     }
