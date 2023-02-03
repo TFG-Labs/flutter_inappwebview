@@ -123,6 +123,7 @@ class ChromeSafariBrowser {
   Future<void> close() async {
     Map<String, dynamic> args = <String, dynamic>{};
     await _channel.invokeMethod("close", args);
+    _isOpened = false;
   }
 
   ///Set a custom action button.
