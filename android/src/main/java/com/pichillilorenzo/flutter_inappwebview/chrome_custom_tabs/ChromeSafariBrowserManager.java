@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import android.util.Log;
 
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -60,6 +61,15 @@ public class ChromeSafariBrowserManager implements MethodChannel.MethodCallHandl
           result.success(false);
         }
         break;
+      case "close":
+        if (plugin != null && plugin.activity != null) {
+          if(plugin.activity instanceof Activity){
+            Activity activity = (Activity) plugin.activity;
+            activity.finish();
+            result.success(true);
+          }
+        }
+        break;
       default:
         result.notImplemented();
     }
@@ -90,6 +100,8 @@ public class ChromeSafariBrowserManager implements MethodChannel.MethodCallHandl
       if (noHistory) {
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
       }
+      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
       activity.startActivity(intent);
       result.success(true);
       return;
@@ -97,6 +109,7 @@ public class ChromeSafariBrowserManager implements MethodChannel.MethodCallHandl
       intent = new Intent(Intent.ACTION_VIEW);
       intent.setData(Uri.parse(url));
       intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
       activity.startActivity(intent);
       result.success(true);
       return;
