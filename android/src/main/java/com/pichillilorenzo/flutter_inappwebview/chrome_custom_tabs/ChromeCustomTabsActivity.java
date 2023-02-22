@@ -275,6 +275,8 @@ public class ChromeCustomTabsActivity extends Activity implements MethodChannel.
     customTabsSession = null;
     finish();
     Map<String, Object> obj = new HashMap<>();
-    channel.invokeMethod("onChromeSafariBrowserClosed", obj);
+    if(channel != null) {
+      channel.invokeMethod("onChromeSafariBrowserClosed", obj);
+    }
   }
 }
