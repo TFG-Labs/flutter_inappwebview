@@ -265,7 +265,9 @@ public class ChromeCustomTabsActivity extends Activity implements MethodChannel.
   public void dispose() {
     onStop();
     onDestroy();
-    channel.setMethodCallHandler(null);
+    if(channel != null){
+      channel.setMethodCallHandler(null);
+    }
     manager = null;
   }
 
