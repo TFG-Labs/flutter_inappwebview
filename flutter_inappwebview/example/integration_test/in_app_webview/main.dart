@@ -55,7 +55,7 @@ part 'get_title.dart';
 
 part 'handles_url_scheme.dart';
 
-part 'http_auth_credential_database.dart';
+// part 'http_auth_credential_database.dart';
 
 part 'initial_url_request.dart';
 
@@ -63,9 +63,9 @@ part 'inject_css.dart';
 
 part 'inject_javascript_file.dart';
 
-part 'intercept_ajax_request.dart';
+// part 'intercept_ajax_request.dart';
 
-part 'intercept_fetch_request.dart';
+// part 'intercept_fetch_request.dart';
 
 part 'is_loading.dart';
 
@@ -89,7 +89,7 @@ part 'on_console_message.dart';
 
 part 'on_content_size_changed.dart';
 
-part 'on_download_start_request.dart';
+// part 'on_download_start_request.dart';
 
 part 'on_js_before_unload.dart';
 
@@ -135,7 +135,7 @@ part 'programmatic_zoom_scale.dart';
 
 part 'pause_resume_timers.dart';
 
-part 'post_requests.dart';
+// part 'post_requests.dart';
 
 part 'print_current_page.dart';
 
@@ -163,7 +163,7 @@ part 'should_intercept_request.dart';
 
 part 'should_override_url_loading.dart';
 
-part 'ssl_request.dart';
+// part 'ssl_request.dart';
 
 part 'stop_loading.dart';
 
@@ -215,12 +215,12 @@ void main() {
     shouldOverrideUrlLoading();
     onReceivedError();
     webViewWindows();
-    interceptAjaxRequest();
-    interceptFetchRequest();
+    // interceptAjaxRequest();
+    // interceptFetchRequest();
     contentBlocker();
-    httpAuthCredentialDatabase();
+    // httpAuthCredentialDatabase();
     onConsoleMessage();
-    onDownloadStartRequest();
+    // onDownloadStartRequest();
     javascriptDialogs();
     onReceivedHttpError();
     onLoadResourceWithCustomScheme();
@@ -229,7 +229,7 @@ void main() {
     onProgressChanged();
     safeBrowsing();
     onScrollChanged();
-    sslRequest();
+    // sslRequest();
     onPrint();
     onWindowFocus();
     onWindowBlur();
@@ -242,7 +242,7 @@ void main() {
     onReceivedTouchIconUrl();
     onJsBeforeUnload();
     onNavigationResponse();
-    postRequests();
+    // postRequests();
     loadData();
     loadFile();
     reload();

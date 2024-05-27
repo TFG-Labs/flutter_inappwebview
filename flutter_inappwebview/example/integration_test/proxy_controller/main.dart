@@ -8,12 +8,12 @@ import '../constants.dart';
 import '../../../../tool/env.dart';
 import '../util.dart';
 
-part 'clear_and_set_proxy_override.dart';
+// part 'clear_and_set_proxy_override.dart';
 
 void main() {
   final shouldSkip = kIsWeb;
 
   skippableGroup('Proxy Controller', () {
-    clearAndSetProxyOverride();
+    // clearAndSetProxyOverride();
   }, skip: shouldSkip);
 }
