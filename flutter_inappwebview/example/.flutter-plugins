@@ -5,6 +5,7 @@ flutter_inappwebview_android=/Users/lawrences/work/flutter_inappwebview/flutter_
 flutter_inappwebview_ios=/Users/lawrences/work/flutter_inappwebview/flutter_inappwebview_ios/
 flutter_inappwebview_macos=/Users/lawrences/work/flutter_inappwebview/flutter_inappwebview_macos/
 flutter_inappwebview_web=/Users/lawrences/work/flutter_inappwebview/flutter_inappwebview_web/
+flutter_inappwebview_windows=/Users/lawrences/work/flutter_inappwebview/flutter_inappwebview_windows/
 integration_test=/Users/lawrences/flutter/packages/integration_test/
 path_provider=/Users/lawrences/.pub-cache/hosted/pub.dev/path_provider-2.0.15/
 path_provider_android=/Users/lawrences/.pub-cache/hosted/pub.dev/path_provider_android-2.2.2/
