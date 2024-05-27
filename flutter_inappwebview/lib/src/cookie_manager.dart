@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
 
 import 'in_app_webview/in_app_webview_controller.dart';
-import 'webview_environment/webview_environment.dart';
 
 ///{@macro flutter_inappwebview_platform_interface.PlatformCookieManager}
 class CookieManager {
@@ -32,21 +31,12 @@ class CookieManager {
 
   static CookieManager? _instance;
 
-  WebViewEnvironment? _webViewEnvironment;
-
   ///Gets the [CookieManager] shared instance.
-  ///
-  ///[webViewEnvironment] (Supported only on Windows) - Used to create the [CookieManager] using the specified environment.
-  static CookieManager instance({WebViewEnvironment? webViewEnvironment}) {
-    if (webViewEnvironment == null) {
-      if (_instance == null) {
-        _instance = CookieManager();
-      }
-      return _instance!;
-    } else {
-      return CookieManager.fromPlatformCreationParams(
-          PlatformCookieManagerCreationParams());
+  static CookieManager instance() {
+    if (_instance == null) {
+      _instance = CookieManager();
     }
+    return _instance!;
   }
 
   ///{@macro flutter_inappwebview_platform_interface.PlatformCookieManager.setCookie}

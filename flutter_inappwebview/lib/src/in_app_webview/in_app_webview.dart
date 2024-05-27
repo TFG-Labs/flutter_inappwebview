@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
-import '../webview_environment/webview_environment.dart';
 import 'headless_in_app_webview.dart';
 import 'in_app_webview_controller.dart';
 import '../find_interaction/find_interaction_controller.dart';
@@ -43,7 +42,6 @@ class InAppWebView extends StatefulWidget {
     InAppWebViewKeepAlive? keepAlive,
     bool? preventGestureDelay,
     TextDirection? layoutDirection,
-    WebViewEnvironment? webViewEnvironment,
     @Deprecated('Use onGeolocationPermissionsHidePrompt instead')
     void Function(InAppWebViewController controller)?
         androidOnGeolocationPermissionsHidePrompt,
@@ -312,7 +310,6 @@ class InAppWebView extends StatefulWidget {
               findInteractionController: findInteractionController?.platform,
               contextMenu: contextMenu,
               layoutDirection: layoutDirection,
-              // webViewEnvironment: webViewEnvironment?.platform,
               onWebViewCreated: onWebViewCreated != null
                   ? (controller) => onWebViewCreated.call(controller)
                   : null,

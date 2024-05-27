@@ -15,10 +15,10 @@ class MyInAppBrowser extends InAppBrowser {
       UnmodifiableListView<UserScript>? initialUserScripts,
       PullToRefreshController? pullToRefreshController})
       : super(
-            windowId: windowId,
-            initialUserScripts: initialUserScripts,
-            pullToRefreshController: pullToRefreshController,
-            webViewEnvironment: webViewEnvironment,);
+          windowId: windowId,
+          initialUserScripts: initialUserScripts,
+          pullToRefreshController: pullToRefreshController,
+        );
 
   @override
   Future onBrowserCreated() async {

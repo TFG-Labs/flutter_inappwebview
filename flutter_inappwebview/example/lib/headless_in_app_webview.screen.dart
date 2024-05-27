@@ -24,7 +24,6 @@ class _HeadlessInAppWebViewExampleScreenState
         : WebUri("http://localhost:${Uri.base.port}/page.html");
 
     headlessWebView = HeadlessInAppWebView(
-      webViewEnvironment: webViewEnvironment,
       initialUrlRequest: URLRequest(url: url),
       initialSettings: InAppWebViewSettings(
         isInspectable: kDebugMode,

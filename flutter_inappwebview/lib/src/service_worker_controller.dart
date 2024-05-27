@@ -83,8 +83,6 @@ class ServiceWorkerController {
 class AndroidServiceWorkerController {
   static AndroidServiceWorkerController? _instance;
 
-  AndroidServiceWorkerController._();
-
   AndroidServiceWorkerClient? _serviceWorkerClient;
 
   AndroidServiceWorkerClient? get serviceWorkerClient => _serviceWorkerClient;
